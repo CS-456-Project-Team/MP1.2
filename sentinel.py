@@ -4,7 +4,7 @@ import time
 import threading
 import random
 import os
-# Security Domain : Network Sentinel/Firewall Agent
+from checkpoint import save_state, load_state
 
 # List of blacklisted IP addresses
 BLACKLISTED_IPS = ["203.0.113.10", "198.51.100.23"]
@@ -31,13 +31,15 @@ def check_request(ip_address, payload):
     return "ALLOW: Request accepted"
 
 # Function to receive messages over UDP
-def receive_message():
+def receive_message(server=None):
+
+    created_socket = server is None
 
     # Creates a UDP socket
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    # Listens on localhost, port 5000
-    server.bind(("127.0.0.1", 5000))
+    if created_socket:
+        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Listens on localhost, port 5000
+        server.bind(("127.0.0.1", 5000))
 
     # Waits at most 1 second for each message
     server.settimeout(1)
@@ -56,18 +58,36 @@ def receive_message():
             message = data.decode("utf-8")
 
             print("Received:", message)
-            # Checks if the message contains the expected format 
-            # with IP address and payload separated by "|"
-            if "|" in message:
-                # Splits the message into IP address and payload
+
+            # Checks whether the request is to block a new IP
+            if message.startswith("BLOCK_IP|"):
+
+                ip_address = message.split("|", 1)[1].strip()
+
+                if not ip_address:
+                    result = "ERROR: Missing IP address"
+
+                elif ip_address not in BLACKLISTED_IPS:
+
+                    BLACKLISTED_IPS.append(ip_address)
+
+                    save_state(BLACKLISTED_IPS)
+
+                    result = "IP added to blacklist"
+
+                else:
+                    result = "IP already blacklisted"
+
+            # Otherwise process a normal firewall request
+            elif "|" in message:
+
                 ip_address, payload = message.split("|", 1)
 
                 result = check_request(
                     ip_address.strip(),
                     payload.strip()
                 )
-            # If the message does not contain "|"
-            # it is considered invalid
+
             else:
                 result = "ERROR: Invalid request format"
 
@@ -79,7 +99,8 @@ def receive_message():
         print("\nSentinel stopped by user.")
 
     finally:
-        server.close()
+        if created_socket:
+            server.close()
 
 
 # Function to send a heartbeat message over UDP
@@ -113,6 +134,15 @@ def random_crash():
     os._exit(1)
 
 if __name__ == "__main__":
+    # Restore the blacklist from the checkpoint
+    try:
+        BLACKLISTED_IPS = list(load_state())
+
+    except FileNotFoundError:
+        save_state(BLACKLISTED_IPS)
+
+    print("Current blacklist:", BLACKLISTED_IPS)
+
     # Start the heartbeat thread
     heartbeat_thread = threading.Thread(target=send_heartbeat, daemon=True)
     heartbeat_thread.start()

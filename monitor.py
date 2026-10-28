@@ -7,6 +7,7 @@ import time
 HOST = '127.0.0.1'
 PORT = 5001
 TIMEOUT = 3 #Timeout duration in seconds for considering the service down
+BACKUP_PORT = 5002
 
 # Function to receive heartbeat messages from a service and monitor its status
 def receive_heartbeat():
@@ -33,7 +34,7 @@ def receive_heartbeat():
                     print(f"[{datetime.now()}] Received heartbeat message: {message}")
                     # Checks if the service was previously down and has now recovered
                     if service_down:
-                        print(f"[{datetime.now()}] Sentinel recovered")
+                        print(f"[{datetime.now()}] [Service Restored] Heartbeats resumed")
                         service_down = False
             # Handles socket timeout exceptions
             except socket.timeout:
@@ -44,7 +45,13 @@ def receive_heartbeat():
                 # Checks if the last heartbeat was too long ago
                 if time.monotonic() - last_heartbeat >= TIMEOUT:
 
-                    print(f"[{datetime.now()}] ALERT: Sentinel is down!")
+                    print(f"[{datetime.now()}] [Crash Detected] Sentinel is down!")
+                    
+                    # Automatically tell the backup to take over
+                    monitor.sendto(b"PROMOTE", (HOST, BACKUP_PORT))
+
+                    print(f"[{datetime.now()}] [Failover Triggered] Promotion signal sent")
+                    
                     # Marks the service as down
                     service_down = True
     
@@ -52,7 +59,7 @@ def receive_heartbeat():
         print("Server unexpectedly closed")
         
     except KeyboardInterrupt:
-        print("Server stopped by user")
+        print("Monitor stopped by user")
     
     finally:
         monitor.close()

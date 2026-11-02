@@ -11,6 +11,9 @@
 * monitor.py : Updated the code to detect when the sentinel crashes and automatically send a promotion signal to the backup.
   
 **Benjamin Mooneyham "Moonshammy"**:
+* Added UML Diagram
+* Recorded Video
+* Ensured all deliverables were submitted 
 
 **Matthew Leman "Philojyw"**:
 * monitor.py : Improved the monitor's failover reliability by adding crash, failover, and recovery logging, separating the socket polling interval from the failure timeout, and adding repeated promotion attempts while the primary remains unavailable.

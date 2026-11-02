@@ -13,6 +13,11 @@
 **Benjamin Mooneyham "Moonshammy"**:
 
 **Matthew Leman "Philojyw"**:
+* monitor.py : Improved the monitor's failover reliability by adding crash, failover, and recovery logging, separating the socket polling interval from the failure timeout, and adding repeated promotion attempts while the primary remains unavailable.
+* checkpoint.py : Improved checkpoint reliability by adding validation for saved blacklist data, using a consistent checkpoint file path, and making checkpoint writes atomic to reduce the risk of corrupted state.
+sentinel.py : Updated checkpoint loading to safely handle missing or invalid checkpoint data.
+* backup.py : Updated checkpoint restoration to use the centralized validation logic and safely reject invalid checkpoint data during promotion.
+* adversary.py : Updated checkpoint access to use the shared checkpoint path.
 
 **Tyler Short "Tsyber"**: 
 * adversary.py : Implemented attacks 1 and 2 to simulate both a heartbeat delay and a corrupted checkpoint
